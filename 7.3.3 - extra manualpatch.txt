@@ -1,0 +1,13 @@
+# For sub generate_configdrive2
+if (!defined($meta_data)) {
+-       $meta_data = configdrive2_gen_metadata($user_data, $network_data);
++       $meta_data = configdrive2_gen_metadata($conf, $vmid, $user_data, $network_data);
+     }
+
+
+# For sub dump_cloudinit_config
+        } else {
+            my $network = configdrive2_network($conf);
+-            return configdrive2_gen_metadata($user, $network);
++            return configdrive2_gen_metadata($conf, $vmid, $user, $network);
+        }
