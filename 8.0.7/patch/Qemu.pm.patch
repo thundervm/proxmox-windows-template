@@ -1,0 +1,51 @@
+--- /usr/share/perl5/PVE/API2/Qemu.pm.original	2023-08-21 11:30:45.000000000 +0200
++++ /usr/share/perl5/PVE/API2/Qemu.pm	2023-09-15 09:24:49.529312648 +0200
+@@ -1539,10 +1539,16 @@
+ 
+     my $skip_cloud_init = extract_param($param, 'skip_cloud_init');
+ 
++    my $conf = PVE::QemuConfig->load_config($vmid);
++
++    my $ostype = $conf->{ostype};
++
+     if (defined(my $cipassword = $param->{cipassword})) {
+ 	# Same logic as in cloud-init (but with the regex fixed...)
+-	$param->{cipassword} = PVE::Tools::encrypt_pw($cipassword)
+-	    if $cipassword !~ /^\$(?:[156]|2[ay])(\$.+){2}/;
++        if (!(PVE::QemuServer::windows_version($ostype))) {
++	    $param->{cipassword} = PVE::Tools::encrypt_pw($cipassword)
++	        if $cipassword !~ /^\$(?:[156]|2[ay])(\$.+){2}/;
++        }
+     }
+ 
+     my @paramarr = (); # used for log message
+@@ -4805,7 +4811,7 @@
+ 	    },
+ 	},
+     },
+-    returns => {
++     returns => {
+ 	type => 'string',
+ 	description => "the task ID.",
+     },
+@@ -4847,6 +4853,9 @@
+ 	    my (undef, undef, undef, undef, undef, undef, $format) =
+ 		PVE::Storage::parse_volname($storecfg, $drive->{file});
+ 
++	    die "can't resize volume: $disk if snapshot exists\n"
++		if %{$conf->{snapshots}} && $format eq 'qcow2';
++
+ 	    my $volid = $drive->{file};
+ 
+ 	    die "disk '$disk' has no associated volume\n" if !$volid;
+@@ -4893,8 +4902,8 @@
+ 	};
+ 
+ 	my $worker = sub {
+-	    PVE::QemuConfig->lock_config($vmid, $updatefn);
+-	};
++				PVE::QemuConfig->lock_config($vmid, $updatefn);
++		};
+ 
+ 	return $rpcenv->fork_worker('resize', $vmid, $authuser, $worker);
+     }});
